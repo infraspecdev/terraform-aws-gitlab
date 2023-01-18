@@ -1,5 +1,9 @@
 locals {
-  managed_by = "Terraform"
+  managed_by                   = "Terraform"
+  gitlab_config_template_file  = "${path.module}/gitlab_config_templates/gitlab.rb.tftpl"
+  gitlab_config_generated_file = "${path.cwd}/gitlab_config/gitlab.rb"
+  gitlab_config_playbook_file  = "${path.module}/playbooks/gitlab_setup.yaml"
+  gitlab_complete_url          = join("", tolist(["https://", values(module.records.route53_record_name)[0]]))
 }
 
 resource "aws_instance" "gitlab" {
@@ -16,11 +20,16 @@ resource "aws_instance" "gitlab" {
     volume_size           = var.volume_size
     delete_on_termination = false
   }
+
+  provisioner "local-exec" {
+    command = "ansible-playbook -u ubuntu -i '${self.private_ip},' --private-key ${var.private_key} -e 'instance_ip_address=${self.private_ip} file_path=${local_file.gitlab_config_file.filename}' ${local.gitlab_config_playbook_file}"
+  }
   tags = {
     Name        = "${var.environment_prefix}-gitlab"
     Environment = var.environment_prefix
     ManagedBy   = local.managed_by
   }
+  depends_on = [local_file.gitlab_config_file]
 }
 
 resource "aws_key_pair" "gitlab_ssh" {
@@ -448,4 +457,18 @@ EOF
 resource "aws_iam_instance_profile" "gitlab" {
   name = "gitlab"
   role = aws_iam_role.gitlab_backup.name
+}
+
+resource "local_file" "gitlab_config_file" {
+  filename = local.gitlab_config_generated_file
+  content = templatefile(local.gitlab_config_template_file, {
+    gitlab_url                   = local.gitlab_complete_url,
+    gitlab_db_name               = module.gitlab_pg.db_instance_name,
+    gitlab_db_username           = module.gitlab_pg.db_instance_username,
+    gitlab_db_password           = module.gitlab_pg.db_instance_password,
+    gitlab_db_host               = module.gitlab_pg.db_instance_address,
+    gitlab_redis_host            = aws_elasticache_cluster.gitlab_redis.cache_nodes[0].address,
+    aws_region                   = aws_s3_bucket.gitlab_backup[0].region
+    gitlab_backup_s3_bucket_name = aws_s3_bucket.gitlab_backup[0].bucket
+  })
 }

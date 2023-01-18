@@ -268,3 +268,8 @@ variable "gitlab_backup_bucket_name" {
   default     = null
   description = "Name of S3 bucket to be used for Gitlab backup"
 }
+
+variable "private_key" {
+  type        = string
+  description = "Private key to execute ansible playbook on Gitlab instance."
+}

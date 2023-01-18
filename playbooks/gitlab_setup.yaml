@@ -1,0 +1,19 @@
+---
+- name: Configure Gitlab
+  hosts: "{{ instance_ip_address }}"
+  gather_facts: no
+  vars:
+    ansible_host_key_checking: false
+  tasks:
+    - local_action: wait_for port=22 host="{{ instance_ip_address }}" delay=10 timeout=300
+    - name: copy gitlab.rb to /etc/gitlab/
+      become: true
+      copy:
+        src: "{{ file_path }}"
+        dest: "/etc/gitlab/gitlab.rb"
+        owner: "root"
+        group: "root"
+        mode: 0600
+    - name: reconfigure Gitlab
+      become: true
+      command: gitlab-ctl reconfigure
