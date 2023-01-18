@@ -10,6 +10,7 @@ resource "aws_instance" "gitlab" {
   associate_public_ip_address = false
   vpc_security_group_ids      = [aws_security_group.gitlab.id]
   key_name                    = var.gitlab_ssh_public_key != null ? aws_key_pair.gitlab_ssh[0].key_name : null
+  iam_instance_profile        = aws_iam_instance_profile.gitlab.name
   root_block_device {
     volume_type           = var.volume_type
     volume_size           = var.volume_size
@@ -356,4 +357,95 @@ resource "aws_security_group" "gitlab_redis" {
     Environment = var.environment_prefix
     ManagedBy   = local.managed_by
   }
+}
+
+resource "aws_s3_bucket" "gitlab_backup" {
+  count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
+  bucket = var.gitlab_backup_bucket_name
+  lifecycle {
+    precondition {
+      condition = anytrue([
+        (var.enable_gitlab_backup_to_s3 == false),
+        (var.enable_gitlab_backup_to_s3 == true && var.gitlab_backup_bucket_name != null)
+      ])
+      error_message = "Gitlab backup to S3 is set to ${var.enable_gitlab_backup_to_s3}. gitlab_backup_bucket_name is mandatory to create S3 bucket."
+    }
+
+  }
+}
+
+resource "aws_s3_bucket_acl" "gitlab_backup" {
+  count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
+  bucket = aws_s3_bucket.gitlab_backup[0].id
+  acl    = "private"
+}
+
+data "aws_iam_policy_document" "gitlab_s3_backup" {
+  count = var.enable_gitlab_backup_to_s3 ? 1 : 0
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:AbortMultipartUpload",
+      "s3:GetBucketAcl",
+      "s3:GetBucketLocation",
+      "s3:GetObject",
+      "s3:GetObjectAcl",
+      "s3:ListBucketMultipartUploads",
+      "s3:PutObject",
+      "s3:PutObjectAcl"
+    ]
+    resources = [
+      "arn:aws:s3:::${aws_s3_bucket.gitlab_backup[0].bucket}/*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetBucketLocation",
+      "s3:ListAllMyBuckets"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:ListBucket"
+    ]
+    resources = [
+      "arn:aws:s3:::${aws_s3_bucket.gitlab_backup[0].bucket}"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "gitlab_backup" {
+  count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
+  name   = "gitlab-backup"
+  policy = data.aws_iam_policy_document.gitlab_s3_backup[0].json
+}
+
+resource "aws_iam_role" "gitlab_backup" {
+  name                = "gitlab-backup"
+  assume_role_policy  = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Principal": {
+               "Service": "ec2.amazonaws.com"
+            },
+            "Effect": "Allow",
+            "Sid": ""
+        }
+    ]
+}
+EOF
+  managed_policy_arns = var.enable_gitlab_backup_to_s3 ? [aws_iam_policy.gitlab_backup[0].arn] : []
+}
+
+resource "aws_iam_instance_profile" "gitlab" {
+  name = "gitlab"
+  role = aws_iam_role.gitlab_backup.name
 }

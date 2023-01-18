@@ -256,3 +256,15 @@ variable "gitlab_redis_parameter_group" {
     family = null
   }
 }
+
+variable "enable_gitlab_backup_to_s3" {
+  type        = bool
+  default     = false
+  description = "Enable Gitlab backup on S3 bucket"
+}
+
+variable "gitlab_backup_bucket_name" {
+  type        = string
+  default     = null
+  description = "Name of S3 bucket to be used for Gitlab backup"
+}
