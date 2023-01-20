@@ -4,16 +4,50 @@
   gather_facts: no
   vars:
     ansible_host_key_checking: false
+    update_gitlab_config: false
   tasks:
-    - local_action: wait_for port=22 host="{{ instance_ip_address }}" delay=10 timeout=300
+    - local_action: wait_for port=22 host="{{ instance_ip_address }}" delay=5 timeout=300
+
+    - name: stat for /etc/gitlab/gitlab.rb
+      become: true
+      stat:
+        path: "/etc/gitlab/gitlab.rb"
+      register: original_config_file
+    - name: Checksum for original gitlab.rb"
+      set_fact:
+        original_config_file_checksum: "{{ original_config_file.stat.checksum }}"
+    - name: print original original checksum
+      debug:
+        msg: "{{ original_config_file_checksum }}"
+
+    - name: stat for "{{ config_file }}"
+      local_action: stat path={{ config_file }}
+      register: new_config_file
+    - name: Checksum for new gitlab.rb"
+      set_fact:
+        new_config_file_checksum: "{{ new_config_file.stat.checksum }}"
+    - name: print new file checksum
+      debug:
+        msg: "{{ new_config_file_checksum }}"
+
+    - name: Update gitlab.rb
+      set_fact:
+        update_gitlab_config: true
+      when: original_config_file_checksum != new_config_file_checksum
+
     - name: copy gitlab.rb to /etc/gitlab/
       become: true
+      when: update_gitlab_config
       copy:
-        src: "{{ file_path }}"
+        src: "{{ config_file }}"
         dest: "/etc/gitlab/gitlab.rb"
         owner: "root"
         group: "root"
         mode: 0600
     - name: reconfigure Gitlab
       become: true
+      when: update_gitlab_config
       command: gitlab-ctl reconfigure
+
+    - name: cleanup temp files
+      local_action: command rm -rf {{ workdir }}
