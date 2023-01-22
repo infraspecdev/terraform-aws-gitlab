@@ -1,0 +1,22 @@
+external_url '${gitlab_url}'
+
+gitlab_rails['monitoring_whitelist'] = ['0.0.0.0/0','127.0.0.0/8', '::1/128']
+
+gitlab_rails['db_adapter'] = "postgresql"
+gitlab_rails['db_encoding'] = "unicode"
+gitlab_rails['db_database'] = "${gitlab_db_name}"
+gitlab_rails['db_username'] = "${gitlab_db_username}"
+gitlab_rails['db_password'] = "${gitlab_db_password}"
+gitlab_rails['db_host'] = "${gitlab_db_host}"
+
+gitlab_rails['redis_host'] = "${gitlab_redis_host}"
+gitlab_rails['redis_port'] = 6379
+
+letsencrypt['enable'] = false
+
+gitlab_rails['backup_upload_connection'] = {
+  'provider' => 'AWS',
+  'region' => '${aws_region}',
+  'use_iam_profile' => true
+}
+gitlab_rails['backup_upload_remote_directory'] = '${gitlab_backup_s3_bucket_name}'

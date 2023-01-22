@@ -456,18 +456,27 @@ resource "aws_iam_instance_profile" "gitlab" {
 
 data "template_file" "gitlab_config_template" {
   template = join("\n", [
-    for fn in fileset(".", "${local.gitlab_config_template_file_path}/**") : file(fn)
+    file("${local.gitlab_config_template_file_path}/postgres.tftpl"),
+    file("${local.gitlab_config_template_file_path}/redis.tftpl"),
+    file("${local.gitlab_config_template_file_path}/nginx.tftpl"),
+    file("${local.gitlab_config_template_file_path}/rails.tftpl"),
+    var.create_ses_identity ? file("${local.gitlab_config_template_file_path}/smtp.tftpl") : "",
   ])
-  vars = {
+  vars = merge({
     gitlab_url                   = local.gitlab_complete_url,
     gitlab_db_name               = module.gitlab_pg.db_instance_name,
     gitlab_db_username           = module.gitlab_pg.db_instance_username,
     gitlab_db_password           = module.gitlab_pg.db_instance_password,
     gitlab_db_host               = module.gitlab_pg.db_instance_address,
     gitlab_redis_host            = aws_elasticache_cluster.gitlab_redis.cache_nodes[0].address,
-    aws_region                   = aws_s3_bucket.gitlab_backup[0].region
+    aws_region                   = aws_s3_bucket.gitlab_backup[0].region,
     gitlab_backup_s3_bucket_name = aws_s3_bucket.gitlab_backup[0].bucket
-  }
+    }, var.create_ses_identity ? {
+    smtp_address  = "email-smtp.${var.aws_region}.amazonaws.com",
+    smtp_username = aws_iam_access_key.gitlab_smtp_user[0].id,
+    smtp_password = aws_iam_access_key.gitlab_smtp_user[0].ses_smtp_password_v4,
+    smtp_domain   = data.aws_route53_zone.email_domain[0].name
+  } : {})
 }
 
 resource "local_sensitive_file" "rendered_gitlab_config_file" {
@@ -495,4 +504,61 @@ resource "null_resource" "gitlab_reconfigure" {
   provisioner "local-exec" {
     command = "ansible-playbook -u ubuntu -i '${aws_instance.gitlab[0].private_ip},' --private-key ${var.private_key} -e 'instance_ip_address=${aws_instance.gitlab[0].private_ip} workdir=${local.gitlab_config_tmp_path} config_file=${local_sensitive_file.gitlab_config_file.filename}' ${local.gitlab_config_playbook_file}"
   }
+}
+
+data "aws_route53_zone" "email_domain" {
+  count = var.create_ses_identity ? 1 : 0
+  name  = var.ses_domain != null ? var.ses_domain : var.hosted_zone
+}
+
+resource "aws_ses_domain_identity" "email_domain" {
+  count  = var.create_ses_identity ? 1 : 0
+  domain = data.aws_route53_zone.email_domain[0].name
+}
+
+resource "aws_route53_record" "email_domain_amazonses_verification_record" {
+  count   = var.create_ses_identity ? 1 : 0
+  zone_id = data.aws_route53_zone.email_domain[0].zone_id
+  name    = "_amazonses.${aws_ses_domain_identity.email_domain[0].id}"
+  type    = "TXT"
+  ttl     = "600"
+  records = [aws_ses_domain_identity.email_domain[0].verification_token]
+}
+
+resource "aws_ses_domain_identity_verification" "email_domain_verification" {
+  count  = var.create_ses_identity ? 1 : 0
+  domain = aws_ses_domain_identity.email_domain[0].id
+
+  depends_on = [aws_route53_record.email_domain_amazonses_verification_record[0]]
+}
+
+resource "aws_iam_user" "gitlab_smtp_user" {
+  count = var.create_ses_identity ? 1 : 0
+  name  = "gitlab_smtp_user"
+}
+
+resource "aws_iam_access_key" "gitlab_smtp_user" {
+  count = var.create_ses_identity ? 1 : 0
+  user  = aws_iam_user.gitlab_smtp_user[0].name
+}
+
+data "aws_iam_policy_document" "gitlab_ses_sender" {
+  count = var.create_ses_identity ? 1 : 0
+  statement {
+    actions   = ["ses:SendRawEmail"]
+    resources = [aws_ses_domain_identity.email_domain[0].arn]
+  }
+}
+
+resource "aws_iam_policy" "gitlab_ses_sender" {
+  count       = var.create_ses_identity ? 1 : 0
+  name        = "gitlab_ses_sender"
+  description = "Allows sending of e-mails via Simple Email Service"
+  policy      = data.aws_iam_policy_document.gitlab_ses_sender[0].json
+}
+
+resource "aws_iam_user_policy_attachment" "gitlab_ses_sender" {
+  count      = var.create_ses_identity ? 1 : 0
+  user       = aws_iam_user.gitlab_smtp_user[0].name
+  policy_arn = aws_iam_policy.gitlab_ses_sender[0].arn
 }

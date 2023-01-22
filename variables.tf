@@ -273,3 +273,21 @@ variable "private_key" {
   type        = string
   description = "Private key to execute ansible playbook on Gitlab instance."
 }
+
+variable "create_ses_identity" {
+  type        = bool
+  description = "Create a Amazon SES domain identity for Gitlab SMTP service. The domain should be hosted on Route53."
+  default     = false
+}
+
+variable "ses_domain" {
+  type        = string
+  description = "Route53 hosted domain name for Amazon SES. If no value provided, value of Gitlab hosted zone will be assumed as default."
+  default     = null
+}
+
+variable "aws_region" {
+  type        = string
+  description = "AWS region code. Eg: ap-south-1"
+  default     = "ap-south-1"
+}
