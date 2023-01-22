@@ -37,3 +37,7 @@ output "gitlab_redis_address" {
   value       = aws_elasticache_cluster.gitlab_redis.cache_nodes[0].address
   description = "Gitlab Redis cluster address"
 }
+
+output "gitlab_complete_url" {
+  value = local.gitlab_complete_url
+}
