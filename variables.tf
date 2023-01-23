@@ -301,7 +301,7 @@ variable "aws_region" {
 variable "ses_username" {
   type        = string
   description = "Username for Gitlab SMTP user"
-  default     = "gitlab_smtp_user"
+  default     = "gitlab-smtp-user"
 }
 
 variable "additional_tags" {
