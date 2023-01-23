@@ -110,7 +110,7 @@ module "records" {
   version = "~> 2.0"
 
   zone_name = var.hosted_zone
-  create    = var.create_gitlab_domain
+  create    = var.create_gitlab_route53_record
   records = [
     {
       name = var.gitlab_domain
@@ -126,7 +126,7 @@ module "records" {
 module "acm" {
   source             = "terraform-aws-modules/acm/aws"
   version            = "~> 4.0"
-  create_certificate = var.create_gitlab_domain
+  create_certificate = var.create_acm_certificate
   domain_name        = var.gitlab_fqdn
   zone_id            = data.aws_route53_zone.zone.zone_id
 

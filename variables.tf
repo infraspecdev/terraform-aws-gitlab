@@ -47,8 +47,9 @@ variable "public_subnet_ids" {
   description = "List of public subnet Ids for Gitlab load balancer."
 }
 
-variable "create_gitlab_domain" {
+variable "create_gitlab_route53_record" {
   type        = bool
+  default     = true
   description = "Whether to create a domain in Route53 for your Gitlab."
 }
 variable "gitlab_fqdn" {
