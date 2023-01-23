@@ -36,6 +36,12 @@ variable "volume_size" {
   description = "Size of root EBS volume for Gitlab instance."
 }
 
+variable "volume_iops" {
+  type        = number
+  default     = 3000
+  description = "IOPS for the Gitlab EBS volume"
+}
+
 variable "public_subnet_ids" {
   type        = list(string)
   description = "List of public subnet Ids for Gitlab load balancer."

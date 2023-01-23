@@ -25,6 +25,7 @@ resource "aws_instance" "gitlab" {
   root_block_device {
     volume_type           = var.volume_type
     volume_size           = var.volume_size
+    iops                  = var.volume_iops
     delete_on_termination = false
   }
 
