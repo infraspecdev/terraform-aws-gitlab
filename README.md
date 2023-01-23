@@ -15,7 +15,8 @@ the same will be applied to _gitlab.rb_ on _terraform apply._
 ## Usage
 ```hcl
 module "gitlab" {
-  source                              = "git::https://github.com/infraspecdev/terraform-aws-gitlab.git"
+  source                              = "infraspecdev/gitlab/aws"
+  version                             = "1.0.0"
   gitlab_domain                       = "gitlab"
   gitlab_fqdn                         = "gitlab.example.com"
   hosted_zone                         = "example.com"
