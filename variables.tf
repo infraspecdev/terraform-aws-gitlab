@@ -1,7 +1,7 @@
-variable "environment_prefix" {
+variable "environment" {
   type        = string
-  default     = "p"
-  description = "Development environment prefix. Eg: s for staging, p for production, etc."
+  default     = "production"
+  description = "Development environment. Eg: staging, production, etc."
 }
 
 variable "vpc_id" {
@@ -34,6 +34,12 @@ variable "volume_type" {
 variable "volume_size" {
   type        = number
   description = "Size of root EBS volume for Gitlab instance."
+}
+
+variable "volume_iops" {
+  type        = number
+  default     = 3000
+  description = "IOPS for the Gitlab EBS volume"
 }
 
 variable "public_subnet_ids" {
@@ -295,5 +301,11 @@ variable "aws_region" {
 variable "ses_username" {
   type        = string
   description = "Username for Gitlab SMTP user"
-  default     = "gitlab_smtp_user"
+  default     = "gitlab-smtp-user"
+}
+
+variable "additional_tags" {
+  type        = map(string)
+  default     = {}
+  description = "A map of additional tags to attach to the resources."
 }
