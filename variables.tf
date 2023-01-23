@@ -1,7 +1,7 @@
-variable "environment_prefix" {
+variable "environment" {
   type        = string
-  default     = "p"
-  description = "Development environment prefix. Eg: s for staging, p for production, etc."
+  default     = "production"
+  description = "Development environment. Eg: staging, production, etc."
 }
 
 variable "vpc_id" {

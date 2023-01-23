@@ -1,5 +1,9 @@
 locals {
-  managed_by                         = "Terraform"
+  default_tags = {
+    managed_by  = "Terraform"
+    environment = var.environment
+  }
+  environment_prefix                 = substr(var.environment, 0, 1)
   gitlab_config_file_name            = "gitlab.rb"
   rendered_gitlab_config_file_name   = "gitlab_rendered.rb"
   gitlab_additional_config_file_name = "gitlab_additional.rb"
@@ -24,18 +28,19 @@ resource "aws_instance" "gitlab" {
     delete_on_termination = false
   }
 
-  tags = {
-    Name        = "${var.environment_prefix}-gitlab"
-    Environment = var.environment_prefix
-    ManagedBy   = local.managed_by
-  }
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab"
+  }, local.default_tags)
 
 }
 
 resource "aws_key_pair" "gitlab_ssh" {
   count      = var.gitlab_ssh_public_key != null ? 1 : 0
-  key_name   = "${var.environment_prefix}-gitlab-key-pair"
+  key_name   = "${local.environment_prefix}-gitlab-key-pair"
   public_key = var.gitlab_ssh_public_key
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-key-pair"
+  }, local.default_tags)
 }
 
 data "aws_vpc" "vpc" {
@@ -47,7 +52,7 @@ data "aws_route53_zone" "zone" {
 }
 
 resource "aws_security_group" "gitlab" {
-  name        = "${var.environment_prefix}-gitlab"
+  name        = "${local.environment_prefix}-gitlab"
   vpc_id      = data.aws_vpc.vpc.id
   description = "Security group for Gitlab instance"
   ingress = [
@@ -98,14 +103,13 @@ resource "aws_security_group" "gitlab" {
       description      = "allow all egress"
     }
   ]
-  tags = {
-    Environment = var.environment_prefix
-    ManagedBy   = local.managed_by
-  }
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab"
+  }, local.default_tags)
 }
 
 resource "aws_security_group" "gitlab_lb" {
-  name        = "${var.environment_prefix}-gitlab-lb"
+  name        = "${local.environment_prefix}-gitlab-lb"
   vpc_id      = data.aws_vpc.vpc.id
   description = "Security group for Gitlab load balancer"
   ingress = [
@@ -156,10 +160,9 @@ resource "aws_security_group" "gitlab_lb" {
       description      = "allow all egress"
     }
   ]
-  tags = {
-    Environment = var.environment_prefix
-    ManagedBy   = local.managed_by
-  }
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-lb"
+  }, local.default_tags)
 }
 
 module "records" {
@@ -189,16 +192,16 @@ module "acm" {
 
   wait_for_validation = true
 
-  tags = {
+  tags = merge({
     Name = var.gitlab_domain
-  }
+  }, local.default_tags)
 }
 
 module "elb" {
   source  = "terraform-aws-modules/elb/aws"
   version = "~> 2.0"
 
-  name = "${var.environment_prefix}-gitlab"
+  name = "${local.environment_prefix}-gitlab"
 
   subnets         = var.public_subnet_ids
   security_groups = [aws_security_group.gitlab_lb.id]
@@ -236,20 +239,20 @@ module "elb" {
   number_of_instances = 1
   instances           = tolist([aws_instance.gitlab.id])
 
-  tags = {
-    Environment = var.environment_prefix
-  }
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab"
+  }, local.default_tags)
 }
 
 module "gitlab_pg" {
   source                    = "terraform-aws-modules/rds/aws"
-  identifier                = "${var.environment_prefix}-gitlab-pg"
+  identifier                = "${local.environment_prefix}-gitlab-pg"
   create_db_instance        = true
   create_db_subnet_group    = true
   create_db_parameter_group = var.gitlab_pg_create_db_parameter_group
   parameter_group_name      = var.gitlab_pg_parameter_group_name
   parameters                = var.gitlab_pg_parameters
-  db_subnet_group_name      = "${var.environment_prefix}-gitlab-pg"
+  db_subnet_group_name      = "${var.environment}-gitlab-pg"
   subnet_ids                = var.gitlab_pg_subnet_ids
   allocated_storage         = var.gitlab_pg_allocated_storage
   storage_type              = var.gitlab_pg_storage_type
@@ -263,10 +266,13 @@ module "gitlab_pg" {
   create_random_password    = false
   publicly_accessible       = var.gitlab_pg_publicly_accessible
   vpc_security_group_ids    = [aws_security_group.gitlab_rds.id]
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-pg"
+  }, local.default_tags)
 }
 
 resource "aws_security_group" "gitlab_rds" {
-  name        = "${var.environment_prefix}-gitlab-rds"
+  name        = "${local.environment_prefix}-gitlab-rds"
   vpc_id      = data.aws_vpc.vpc.id
   description = "Security group for Gitlab RDS"
   ingress = [
@@ -282,14 +288,13 @@ resource "aws_security_group" "gitlab_rds" {
       description      = "allow TCP access from Gitlab instance"
     }
   ]
-  tags = {
-    Environment = var.environment_prefix
-    ManagedBy   = local.managed_by
-  }
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-rds"
+  }, local.default_tags)
 }
 
 resource "aws_elasticache_cluster" "gitlab_redis" {
-  cluster_id           = "${var.environment_prefix}-gitlab-redis"
+  cluster_id           = "${local.environment_prefix}-gitlab-redis"
   engine               = "redis"
   node_type            = var.gitlab_redis_node_type
   num_cache_nodes      = var.gitlab_redis_num_cache_nodes
@@ -298,6 +303,10 @@ resource "aws_elasticache_cluster" "gitlab_redis" {
   port                 = var.gitlab_redis_port
   security_group_ids   = [aws_security_group.gitlab_redis.id]
   subnet_group_name    = var.gitlab_redis_create_subnet_group == true ? aws_elasticache_subnet_group.gitlab_redis[0].name : var.gitlab_redis_subnet_group_name
+
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-redis"
+  }, local.default_tags)
 
   lifecycle {
     precondition {
@@ -325,12 +334,13 @@ resource "aws_elasticache_parameter_group" "gitlab_redis" {
 
 resource "aws_elasticache_subnet_group" "gitlab_redis" {
   count      = var.gitlab_redis_create_subnet_group == true ? 1 : 0
-  name       = "${var.environment_prefix}-gitlab-redis"
+  name       = "${local.environment_prefix}-gitlab-redis"
   subnet_ids = var.gitlab_redis_subnet_ids
-  tags = {
-    Name      = "${var.environment_prefix}-gitlab-redis"
-    ManagedBy = local.managed_by
-  }
+
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-redis"
+  }, local.default_tags)
+
   lifecycle {
     precondition {
       condition     = var.gitlab_redis_create_subnet_group && length(var.gitlab_redis_subnet_ids) != 0
@@ -340,7 +350,7 @@ resource "aws_elasticache_subnet_group" "gitlab_redis" {
 }
 
 resource "aws_security_group" "gitlab_redis" {
-  name        = "${var.environment_prefix}-gitlab-redis"
+  name        = "${local.environment_prefix}-gitlab-redis"
   vpc_id      = data.aws_vpc.vpc.id
   description = "Security group for Gitlab Redis"
   ingress = [
@@ -356,15 +366,19 @@ resource "aws_security_group" "gitlab_redis" {
       description      = "allow TCP access from Gitlab instance"
     }
   ]
-  tags = {
-    Environment = var.environment_prefix
-    ManagedBy   = local.managed_by
-  }
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-redis"
+  }, local.default_tags)
 }
 
 resource "aws_s3_bucket" "gitlab_backup" {
   count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
-  bucket = var.gitlab_backup_bucket_name
+  bucket = "${local.environment_prefix}-${var.gitlab_backup_bucket_name}"
+
+  tags = merge({
+    Name = "${local.environment_prefix}-${var.gitlab_backup_bucket_name}"
+  }, local.default_tags)
+
   lifecycle {
     precondition {
       condition = anytrue([
@@ -373,7 +387,6 @@ resource "aws_s3_bucket" "gitlab_backup" {
       ])
       error_message = "Gitlab backup to S3 is set to ${var.enable_gitlab_backup_to_s3}. gitlab_backup_bucket_name is mandatory to create S3 bucket."
     }
-
   }
 }
 
@@ -424,12 +437,15 @@ data "aws_iam_policy_document" "gitlab_s3_backup" {
 
 resource "aws_iam_policy" "gitlab_backup" {
   count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
-  name   = "gitlab-backup"
+  name   = "${local.environment_prefix}-gitlab-backup"
   policy = data.aws_iam_policy_document.gitlab_s3_backup[0].json
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-backup"
+  }, local.default_tags)
 }
 
 resource "aws_iam_role" "gitlab_backup" {
-  name                = "gitlab-backup"
+  name                = "${local.environment_prefix}-gitlab-backup"
   assume_role_policy  = <<EOF
 {
     "Version": "2012-10-17",
@@ -446,11 +462,17 @@ resource "aws_iam_role" "gitlab_backup" {
 }
 EOF
   managed_policy_arns = var.enable_gitlab_backup_to_s3 ? [aws_iam_policy.gitlab_backup[0].arn] : []
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab-backup"
+  }, local.default_tags)
 }
 
 resource "aws_iam_instance_profile" "gitlab" {
-  name = "gitlab"
+  name = "${local.environment_prefix}-gitlab"
   role = aws_iam_role.gitlab_backup.name
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab"
+  }, local.default_tags)
 }
 
 data "template_file" "gitlab_config_template" {
