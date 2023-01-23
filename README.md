@@ -1,18 +1,20 @@
 # Gitlab Omnibus setup terraform module
-This terraform module create the entire infrastructure on AWS needed for setting up single instance Gitlab Omnibus. 
-AWS hosted offerings for Postgres(RDS) and Redis(Elasticache) are used in this setup. 
+
+This terraform module create the entire infrastructure on AWS needed for setting up single instance Gitlab Omnibus. AWS hosted offerings for Postgres(RDS) and Redis(Elasticache) are used in this setup.
+
 Along with that, the module takes care of setting up the following infrastructure components:
- - Classic load balancer with HTTPS and SSH connection support
- - Gitlab subdomain creation using Route53 and automatic certificate generation using ACM. _(Hosted zone is needed to be on Route53)._
- - Backup upload to Amazon S3
- - Support for Amazon SES as the SMTP service for Gitlab along with domain identity verification. _(Hosted zone should be on Route53)_
+
+- Classic load balancer with HTTPS and SSH connection support
+- Gitlab subdomain creation using Route53 and automatic certificate generation using ACM. _(Hosted zone is needed to be on Route53)._
+- Backup upload to Amazon S3
+- Support for Amazon SES as the SMTP service for Gitlab along with domain identity verification. _(Hosted zone should be on Route53)_
 
 Ansible playbook is used for configuring the _gitlab.rb_ file. Any change in gitlab config is detected at the time of _terraform apply_ 
 and config changes are applied. Any additional configuration can be added to **./gitlab_config/gitlab_additional.rb** file and
 the same will be applied to _gitlab.rb_ on _terraform apply._
 
-
 ## Usage
+
 ```hcl
 module "gitlab" {
   source                              = "infraspecdev/gitlab/aws"
@@ -39,8 +41,10 @@ module "gitlab" {
   create_ses_identity                 = true
 }
 ```
+
 ## Examples
-[complete-gitlab-setup](examples/complete-gitlab-setup)
+
+[Example](examples/complete-gitlab-setup)
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
