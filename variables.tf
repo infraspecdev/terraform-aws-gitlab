@@ -28,11 +28,13 @@ variable "private_subnet_id" {
 
 variable "volume_type" {
   type        = string
+  default     = "gp3"
   description = "Root EBS volume type for Gitlab instance."
 }
 
 variable "volume_size" {
   type        = number
+  default     = 100
   description = "Size of root EBS volume for Gitlab instance."
 }
 
@@ -47,8 +49,9 @@ variable "public_subnet_ids" {
   description = "List of public subnet Ids for Gitlab load balancer."
 }
 
-variable "create_gitlab_domain" {
+variable "create_gitlab_route53_record" {
   type        = bool
+  default     = true
   description = "Whether to create a domain in Route53 for your Gitlab."
 }
 variable "gitlab_fqdn" {
@@ -68,6 +71,7 @@ variable "hosted_zone" {
 
 variable "create_acm_certificate" {
   type        = bool
+  default     = true
   description = "Whether to create SSL certificate for the Gitlab domain. If false, yo need to provide a valid AMC certificate arn in acm_certificate_arn variable."
 }
 
@@ -97,11 +101,13 @@ variable "healthcheck_interval" {
 
 variable "healthcheck_matcher" {
   type        = string
+  default     = "200"
   description = "Response codes to use when checking for a healthy responses from a target."
 }
 
 variable "healthcheck_path" {
   type        = string
+  default     = "/-/readiness"
   description = "Destination for the health check request."
 }
 
@@ -154,16 +160,19 @@ variable "gitlab_pg_subnet_ids" {
 
 variable "gitlab_pg_allocated_storage" {
   type        = number
+  default     = 100
   description = "Gitlab RDS Postgres allocated storage"
 }
 
 variable "gitlab_pg_storage_type" {
   type        = string
+  default     = "gp3"
   description = "Storage type for Gitlab  RDS Postgres"
 }
 
 variable "gitlab_pg_db_name" {
   type        = string
+  default     = "gitlabhq-production"
   description = "Postgres DB name for Gitlab"
 }
 
@@ -175,11 +184,13 @@ variable "gitlab_pg_port" {
 
 variable "gitlab_pg_engine_version" {
   type        = string
+  default     = "12.11"
   description = "Postgres engine version"
 }
 
 variable "gitlab_pg_db_instance_class" {
   type        = string
+  default     = "db.m5.large"
   description = "Postgres RDS instance class"
 }
 
@@ -196,11 +207,13 @@ variable "gitlab_pg_password" {
 
 variable "gitlab_pg_publicly_accessible" {
   type        = bool
+  default     = false
   description = "Allow Gitlab RDS publicly accessible"
 }
 
 variable "gitlab_redis_node_type" {
   type        = string
+  default     = "cache.t3.medium"
   description = "Instance class for Gitlab Redis"
 }
 
@@ -224,6 +237,7 @@ variable "gitlab_redis_parameter_group_name" {
 
 variable "gitlab_redis_engine_version" {
   type        = string
+  default     = "7.0"
   description = "Redis engine version for Gitlab Redis"
 }
 
