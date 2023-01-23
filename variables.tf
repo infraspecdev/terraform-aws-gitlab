@@ -99,12 +99,6 @@ variable "healthcheck_interval" {
   default     = 30
 }
 
-variable "healthcheck_matcher" {
-  type        = string
-  default     = "200"
-  description = "Response codes to use when checking for a healthy responses from a target."
-}
-
 variable "healthcheck_path" {
   type        = string
   default     = "/-/readiness"

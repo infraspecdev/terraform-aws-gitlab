@@ -39,5 +39,6 @@ output "gitlab_redis_address" {
 }
 
 output "gitlab_complete_url" {
-  value = local.gitlab_complete_url
+  value       = local.gitlab_complete_url
+  description = "Gitlab url including the url schema"
 }

@@ -9,5 +9,6 @@ output "gitlab_redis_address" {
 }
 
 output "gitlab_url" {
-  value = module.gitlab.gitlab_complete_url
+  value       = module.gitlab.gitlab_complete_url
+  description = "Gitlab url including the url schema"
 }
