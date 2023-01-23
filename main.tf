@@ -534,7 +534,7 @@ resource "aws_ses_domain_identity_verification" "email_domain_verification" {
 
 resource "aws_iam_user" "gitlab_smtp_user" {
   count = var.create_ses_identity ? 1 : 0
-  name  = "gitlab_smtp_user"
+  name  = var.ses_username
 }
 
 resource "aws_iam_access_key" "gitlab_smtp_user" {

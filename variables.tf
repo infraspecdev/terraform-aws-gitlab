@@ -291,3 +291,9 @@ variable "aws_region" {
   description = "AWS region code. Eg: ap-south-1"
   default     = "ap-south-1"
 }
+
+variable "ses_username" {
+  type        = string
+  description = "Username for Gitlab SMTP user"
+  default     = "gitlab_smtp_user"
+}
