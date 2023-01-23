@@ -1,4 +1,4 @@
-# Gitlab Omnibus setup terraform module
+# Terraform module for Gitlab Omnibus on AWS
 
 This terraform module create the entire infrastructure on AWS needed for setting up single instance Gitlab Omnibus. AWS hosted offerings for Postgres(RDS) and Redis(Elasticache) are used in this setup.
 
