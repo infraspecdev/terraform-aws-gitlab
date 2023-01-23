@@ -1,5 +1,8 @@
 /* Resources for setting up Gitlab remote backup on Amazon S3 */
-
+locals {
+  gitlab_backup_iam_policy_name = "${local.environment_prefix}-gitlab-backup"
+  gitlab_backup_iam_role_name   = "${local.environment_prefix}-gitlab-backup"
+}
 resource "aws_s3_bucket" "gitlab_backup" {
   count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
   bucket = var.gitlab_backup_bucket_name
@@ -64,15 +67,15 @@ data "aws_iam_policy_document" "gitlab_s3_backup" {
 
 resource "aws_iam_policy" "gitlab_backup" {
   count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
-  name   = "${local.environment_prefix}-gitlab-backup"
+  name   = local.gitlab_backup_iam_policy_name
   policy = data.aws_iam_policy_document.gitlab_s3_backup[0].json
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-backup"
+    Name = local.gitlab_backup_iam_policy_name
   }, local.default_tags, var.additional_tags)
 }
 
 resource "aws_iam_role" "gitlab_backup" {
-  name                = "${local.environment_prefix}-gitlab-backup"
+  name                = local.gitlab_backup_iam_role_name
   assume_role_policy  = <<EOF
 {
     "Version": "2012-10-17",
@@ -90,6 +93,6 @@ resource "aws_iam_role" "gitlab_backup" {
 EOF
   managed_policy_arns = var.enable_gitlab_backup_to_s3 ? [aws_iam_policy.gitlab_backup[0].arn] : []
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-backup"
+    Name = local.gitlab_backup_iam_role_name
   }, local.default_tags, var.additional_tags)
 }

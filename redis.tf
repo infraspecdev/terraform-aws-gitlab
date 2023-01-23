@@ -1,6 +1,11 @@
 /* Resources for Gitlab Redis setup */
+locals {
+  gitlab_redis_sg_name           = "${local.environment_prefix}-gitlab-redis"
+  gitlab_redis_subnet_group_name = "${local.environment_prefix}-gitlab-redis"
+  gitlab_redis_cluster_id        = "${local.environment_prefix}-gitlab-redis"
+}
 resource "aws_security_group" "gitlab_redis" {
-  name        = "${local.environment_prefix}-gitlab-redis"
+  name        = local.gitlab_redis_sg_name
   vpc_id      = data.aws_vpc.vpc.id
   description = "Security group for Gitlab Redis"
   ingress = [
@@ -17,7 +22,7 @@ resource "aws_security_group" "gitlab_redis" {
     }
   ]
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-redis"
+    Name = local.gitlab_redis_sg_name
   }, local.default_tags, var.additional_tags)
 }
 
@@ -38,11 +43,11 @@ resource "aws_elasticache_parameter_group" "gitlab_redis" {
 
 resource "aws_elasticache_subnet_group" "gitlab_redis" {
   count      = var.gitlab_redis_create_subnet_group == true ? 1 : 0
-  name       = "${local.environment_prefix}-gitlab-redis"
+  name       = local.gitlab_redis_subnet_group_name
   subnet_ids = var.gitlab_redis_subnet_ids
 
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-redis"
+    Name = local.gitlab_redis_subnet_group_name
   }, local.default_tags, var.additional_tags)
 
   lifecycle {
@@ -54,7 +59,7 @@ resource "aws_elasticache_subnet_group" "gitlab_redis" {
 }
 
 resource "aws_elasticache_cluster" "gitlab_redis" {
-  cluster_id           = "${local.environment_prefix}-gitlab-redis"
+  cluster_id           = local.gitlab_redis_cluster_id
   engine               = "redis"
   node_type            = var.gitlab_redis_node_type
   num_cache_nodes      = var.gitlab_redis_num_cache_nodes
@@ -65,7 +70,7 @@ resource "aws_elasticache_cluster" "gitlab_redis" {
   subnet_group_name    = var.gitlab_redis_create_subnet_group == true ? aws_elasticache_subnet_group.gitlab_redis[0].name : var.gitlab_redis_subnet_group_name
 
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-redis"
+    Name = local.gitlab_redis_cluster_id
   }, local.default_tags, var.additional_tags)
 
   lifecycle {

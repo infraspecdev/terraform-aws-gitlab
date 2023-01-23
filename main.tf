@@ -3,7 +3,11 @@ locals {
     ManagedBy   = "Terraform"
     Environment = var.environment
   }
-  environment_prefix = substr(var.environment, 0, 1)
+  environment_prefix           = substr(var.environment, 0, 1)
+  gitlab_instance_name         = "${local.environment_prefix}-gitlab"
+  gitlab_ssh_key_name          = "${local.environment_prefix}-gitlab-key-pair"
+  gitlab_instance_sg_name      = "${local.environment_prefix}-gitlab"
+  gitlab_instance_profile_name = "${local.environment_prefix}-gitlab"
 }
 
 resource "aws_instance" "gitlab" {
@@ -22,17 +26,17 @@ resource "aws_instance" "gitlab" {
   }
 
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab"
+    Name = local.gitlab_instance_name
   }, local.default_tags, var.additional_tags)
 
 }
 
 resource "aws_key_pair" "gitlab_ssh" {
   count      = var.gitlab_ssh_public_key != null ? 1 : 0
-  key_name   = "${local.environment_prefix}-gitlab-key-pair"
+  key_name   = local.gitlab_ssh_key_name
   public_key = var.gitlab_ssh_public_key
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-key-pair"
+    Name = local.gitlab_ssh_key_name
   }, local.default_tags, var.additional_tags)
 }
 
@@ -45,7 +49,7 @@ data "aws_route53_zone" "zone" {
 }
 
 resource "aws_security_group" "gitlab" {
-  name        = "${local.environment_prefix}-gitlab"
+  name        = local.gitlab_instance_sg_name
   vpc_id      = data.aws_vpc.vpc.id
   description = "Security group for Gitlab instance"
   ingress = [
@@ -97,7 +101,7 @@ resource "aws_security_group" "gitlab" {
     }
   ]
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab"
+    Name = local.gitlab_instance_sg_name
   }, local.default_tags, var.additional_tags)
 }
 
@@ -134,9 +138,9 @@ module "acm" {
 }
 
 resource "aws_iam_instance_profile" "gitlab" {
-  name = "${local.environment_prefix}-gitlab"
+  name = local.gitlab_instance_profile_name
   role = aws_iam_role.gitlab_backup.name
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab"
+    Name = local.gitlab_instance_profile_name
   }, local.default_tags, var.additional_tags)
 }

@@ -1,4 +1,7 @@
 /* Resources for Amazon SES setup to be used as SMTP service for Gitlab */
+locals {
+  gitlab_ses_sender_name = "${local.environment_prefix}-gitlab-ses-sender"
+}
 data "aws_route53_zone" "email_domain" {
   count = var.create_ses_identity ? 1 : 0
   name  = var.ses_domain != null ? var.ses_domain : var.hosted_zone
@@ -45,11 +48,11 @@ data "aws_iam_policy_document" "gitlab_ses_sender" {
 
 resource "aws_iam_policy" "gitlab_ses_sender" {
   count       = var.create_ses_identity ? 1 : 0
-  name        = "${local.environment_prefix}-gitlab-ses-sender"
+  name        = local.gitlab_ses_sender_name
   description = "Allows sending of e-mails via Simple Email Service"
   policy      = data.aws_iam_policy_document.gitlab_ses_sender[0].json
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-ses-sender"
+    Name = local.gitlab_ses_sender_name
   }, local.default_tags, var.additional_tags)
 }
 

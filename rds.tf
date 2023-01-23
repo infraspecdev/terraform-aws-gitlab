@@ -1,6 +1,10 @@
 /* Resources for RDS setup */
+locals {
+  gitlab_rds_cluster_name = "${local.environment_prefix}-gitlab-pg"
+  gitlab_rds_sg_name      = "${local.environment_prefix}-gitlab-rds"
+}
 resource "aws_security_group" "gitlab_rds" {
-  name        = "${local.environment_prefix}-gitlab-rds"
+  name        = local.gitlab_rds_sg_name
   vpc_id      = data.aws_vpc.vpc.id
   description = "Security group for Gitlab RDS"
   ingress = [
@@ -17,13 +21,13 @@ resource "aws_security_group" "gitlab_rds" {
     }
   ]
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-rds"
+    Name = local.gitlab_rds_sg_name
   }, local.default_tags, var.additional_tags)
 }
 
 module "gitlab_pg" {
   source                    = "terraform-aws-modules/rds/aws"
-  identifier                = "${local.environment_prefix}-gitlab-pg"
+  identifier                = local.gitlab_rds_cluster_name
   create_db_instance        = true
   create_db_subnet_group    = true
   create_db_parameter_group = var.gitlab_pg_create_db_parameter_group
@@ -44,6 +48,6 @@ module "gitlab_pg" {
   publicly_accessible       = var.gitlab_pg_publicly_accessible
   vpc_security_group_ids    = [aws_security_group.gitlab_rds.id]
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-pg"
+    Name = local.gitlab_rds_cluster_name
   }, local.default_tags, var.additional_tags)
 }

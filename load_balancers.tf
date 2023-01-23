@@ -1,6 +1,10 @@
 /* Resources for Gitlab classic load balancer */
+locals {
+  gitlab_lb_sg_name = "${local.environment_prefix}-gitlab-lb"
+  gitlab_lb_name    = "${local.environment_prefix}-gitlab"
+}
 resource "aws_security_group" "gitlab_lb" {
-  name        = "${local.environment_prefix}-gitlab-lb"
+  name        = local.gitlab_lb_sg_name
   vpc_id      = data.aws_vpc.vpc.id
   description = "Security group for Gitlab load balancer"
   ingress = [
@@ -52,14 +56,14 @@ resource "aws_security_group" "gitlab_lb" {
     }
   ]
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab-lb"
+    Name = local.gitlab_lb_sg_name
   }, local.default_tags, var.additional_tags)
 }
 
 module "elb" {
   source          = "terraform-aws-modules/elb/aws"
   version         = "~> 2.0"
-  name            = "${local.environment_prefix}-gitlab"
+  name            = local.gitlab_lb_name
   subnets         = var.public_subnet_ids
   security_groups = [aws_security_group.gitlab_lb.id]
   internal        = false
@@ -94,6 +98,6 @@ module "elb" {
   number_of_instances = 1
   instances           = tolist([aws_instance.gitlab.id])
   tags = merge({
-    Name = "${local.environment_prefix}-gitlab"
+    Name = local.gitlab_lb_name
   }, local.default_tags, var.additional_tags)
 }
