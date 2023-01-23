@@ -30,7 +30,7 @@ resource "aws_instance" "gitlab" {
 
   tags = merge({
     Name = "${local.environment_prefix}-gitlab"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 
 }
 
@@ -40,7 +40,7 @@ resource "aws_key_pair" "gitlab_ssh" {
   public_key = var.gitlab_ssh_public_key
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-key-pair"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 data "aws_vpc" "vpc" {
@@ -105,7 +105,7 @@ resource "aws_security_group" "gitlab" {
   ]
   tags = merge({
     Name = "${local.environment_prefix}-gitlab"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 resource "aws_security_group" "gitlab_lb" {
@@ -162,7 +162,7 @@ resource "aws_security_group" "gitlab_lb" {
   ]
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-lb"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 module "records" {
@@ -194,7 +194,7 @@ module "acm" {
 
   tags = merge({
     Name = var.gitlab_domain
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 module "elb" {
@@ -241,7 +241,7 @@ module "elb" {
 
   tags = merge({
     Name = "${local.environment_prefix}-gitlab"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 module "gitlab_pg" {
@@ -268,7 +268,7 @@ module "gitlab_pg" {
   vpc_security_group_ids    = [aws_security_group.gitlab_rds.id]
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-pg"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 resource "aws_security_group" "gitlab_rds" {
@@ -290,7 +290,7 @@ resource "aws_security_group" "gitlab_rds" {
   ]
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-rds"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 resource "aws_elasticache_cluster" "gitlab_redis" {
@@ -306,7 +306,7 @@ resource "aws_elasticache_cluster" "gitlab_redis" {
 
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-redis"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 
   lifecycle {
     precondition {
@@ -323,7 +323,9 @@ resource "aws_elasticache_parameter_group" "gitlab_redis" {
   count  = var.gitlab_redis_create_parameter_group == true ? 1 : 0
   family = var.gitlab_redis_parameter_group.family
   name   = var.gitlab_redis_parameter_group.name
-
+  tags = merge({
+    Name = "${local.environment_prefix}-${var.gitlab_redis_parameter_group.name}"
+  }, local.default_tags, var.additional_tags)
   lifecycle {
     precondition {
       condition     = var.gitlab_redis_parameter_group.name != null && var.gitlab_redis_parameter_group.family != null
@@ -339,7 +341,7 @@ resource "aws_elasticache_subnet_group" "gitlab_redis" {
 
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-redis"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 
   lifecycle {
     precondition {
@@ -368,7 +370,7 @@ resource "aws_security_group" "gitlab_redis" {
   ]
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-redis"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 resource "aws_s3_bucket" "gitlab_backup" {
@@ -377,7 +379,7 @@ resource "aws_s3_bucket" "gitlab_backup" {
 
   tags = merge({
     Name = "${local.environment_prefix}-${var.gitlab_backup_bucket_name}"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 
   lifecycle {
     precondition {
@@ -441,7 +443,7 @@ resource "aws_iam_policy" "gitlab_backup" {
   policy = data.aws_iam_policy_document.gitlab_s3_backup[0].json
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-backup"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 resource "aws_iam_role" "gitlab_backup" {
@@ -464,7 +466,7 @@ EOF
   managed_policy_arns = var.enable_gitlab_backup_to_s3 ? [aws_iam_policy.gitlab_backup[0].arn] : []
   tags = merge({
     Name = "${local.environment_prefix}-gitlab-backup"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 resource "aws_iam_instance_profile" "gitlab" {
@@ -472,7 +474,7 @@ resource "aws_iam_instance_profile" "gitlab" {
   role = aws_iam_role.gitlab_backup.name
   tags = merge({
     Name = "${local.environment_prefix}-gitlab"
-  }, local.default_tags)
+  }, local.default_tags, var.additional_tags)
 }
 
 data "template_file" "gitlab_config_template" {

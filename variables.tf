@@ -297,3 +297,9 @@ variable "ses_username" {
   description = "Username for Gitlab SMTP user"
   default     = "gitlab_smtp_user"
 }
+
+variable "additional_tags" {
+  type        = map(string)
+  default     = {}
+  description = "A map of additional tags to attach to the resources."
+}
