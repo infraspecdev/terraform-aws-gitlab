@@ -11,7 +11,6 @@ locals {
 }
 
 resource "aws_instance" "gitlab" {
-  count                       = 1
   ami                         = var.ami_id
   instance_type               = var.instance_type
   subnet_id                   = var.private_subnet_id
@@ -234,8 +233,8 @@ module "elb" {
     unhealthy_threshold = var.healthcheck_unhealthy_threshold
     timeout             = var.healthcheck_timeout
   }
-  number_of_instances = length(aws_instance.gitlab)
-  instances           = aws_instance.gitlab[*].id
+  number_of_instances = 1
+  instances           = tolist([aws_instance.gitlab.id])
 
   tags = {
     Environment = var.environment_prefix
@@ -502,7 +501,7 @@ resource "null_resource" "gitlab_reconfigure" {
     timestamp = timestamp()
   }
   provisioner "local-exec" {
-    command = "ansible-playbook -u ubuntu -i '${aws_instance.gitlab[0].private_ip},' --private-key ${var.private_key} -e 'instance_ip_address=${aws_instance.gitlab[0].private_ip} workdir=${local.gitlab_config_tmp_path} config_file=${local_sensitive_file.gitlab_config_file.filename}' ${local.gitlab_config_playbook_file}"
+    command = "ansible-playbook -u ubuntu -i '${aws_instance.gitlab.private_ip},' --private-key ${var.private_key} -e 'instance_ip_address=${aws_instance.gitlab.private_ip} workdir=${local.gitlab_config_tmp_path} config_file=${local_sensitive_file.gitlab_config_file.filename}' ${local.gitlab_config_playbook_file}"
   }
 }
 

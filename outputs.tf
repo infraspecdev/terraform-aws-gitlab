@@ -1,6 +1,6 @@
 output "gitlab_instance_id" {
   description = "Instance Id of the Gitlab EC2 instance."
-  value       = aws_instance.gitlab[*].id
+  value       = aws_instance.gitlab.id
 }
 
 output "gitlab_sg_id" {
