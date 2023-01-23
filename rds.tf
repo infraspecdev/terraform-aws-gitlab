@@ -27,6 +27,7 @@ resource "aws_security_group" "gitlab_rds" {
 
 module "gitlab_pg" {
   source                    = "terraform-aws-modules/rds/aws"
+  version                   = "~> 5.2.3"
   identifier                = local.gitlab_rds_cluster_name
   create_db_instance        = true
   create_db_subnet_group    = true
