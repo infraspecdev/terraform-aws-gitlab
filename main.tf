@@ -550,15 +550,15 @@ resource "aws_route53_record" "email_domain_amazonses_verification_record" {
 }
 
 resource "aws_ses_domain_identity_verification" "email_domain_verification" {
-  count  = var.create_ses_identity ? 1 : 0
-  domain = aws_ses_domain_identity.email_domain[0].id
-
+  count      = var.create_ses_identity ? 1 : 0
+  domain     = aws_ses_domain_identity.email_domain[0].id
   depends_on = [aws_route53_record.email_domain_amazonses_verification_record[0]]
 }
 
 resource "aws_iam_user" "gitlab_smtp_user" {
   count = var.create_ses_identity ? 1 : 0
   name  = var.ses_username
+  tags  = merge(local.default_tags, var.additional_tags)
 }
 
 resource "aws_iam_access_key" "gitlab_smtp_user" {
@@ -576,9 +576,12 @@ data "aws_iam_policy_document" "gitlab_ses_sender" {
 
 resource "aws_iam_policy" "gitlab_ses_sender" {
   count       = var.create_ses_identity ? 1 : 0
-  name        = "gitlab_ses_sender"
+  name        = "${local.environment_prefix}-gitlab_ses_sender"
   description = "Allows sending of e-mails via Simple Email Service"
   policy      = data.aws_iam_policy_document.gitlab_ses_sender[0].json
+  tags = merge({
+    Name = "${local.environment_prefix}-gitlab_ses_sender"
+  }, local.default_tags, var.additional_tags)
 }
 
 resource "aws_iam_user_policy_attachment" "gitlab_ses_sender" {
