@@ -10,10 +10,6 @@ resource "aws_s3_bucket" "gitlab_backup" {
 
   tags = merge(local.default_tags, var.additional_tags)
 
-  aws_s3_bucket_public_access_block = {
-    block_public_acls       = true
-  }
-
   lifecycle {
     precondition {
       condition = anytrue([
@@ -24,11 +20,15 @@ resource "aws_s3_bucket" "gitlab_backup" {
     }
   }
 }
-
-resource "aws_s3_bucket_acl" "gitlab_backup" {
+q
+resource "aws_s3_bucket_public_access_block" "this" {
   count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
   bucket = aws_s3_bucket.gitlab_backup[0].id
-  acl    = "private"
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 data "aws_iam_policy_document" "gitlab_s3_backup" {
