@@ -1,0 +1,11 @@
+name: Snyk Infrastructure as Code
+on: push
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Snyk to check Terraform manifest file for issues
+        uses: snyk/actions/iac@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
