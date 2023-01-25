@@ -3,11 +3,16 @@ locals {
   gitlab_backup_iam_policy_name = "${local.environment_prefix}-gitlab-backup"
   gitlab_backup_iam_role_name   = "${local.environment_prefix}-gitlab-backup"
 }
+
 resource "aws_s3_bucket" "gitlab_backup" {
   count  = var.enable_gitlab_backup_to_s3 ? 1 : 0
   bucket = var.gitlab_backup_bucket_name
 
   tags = merge(local.default_tags, var.additional_tags)
+
+  aws_s3_bucket_public_access_block = {
+    block_public_acls       = true
+  }
 
   lifecycle {
     precondition {
